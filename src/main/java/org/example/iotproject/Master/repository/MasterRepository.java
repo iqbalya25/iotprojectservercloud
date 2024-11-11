@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface MasterRepository extends JpaRepository<Master, Long> {
     Optional<Master> findByMasterName (String masterName);
     Optional<Master> findByMasterIpAddress (String masterIpAddress);
+    Master findByPlcId (int plcId);
 }
