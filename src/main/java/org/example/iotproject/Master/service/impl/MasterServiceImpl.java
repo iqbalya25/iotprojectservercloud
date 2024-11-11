@@ -82,7 +82,7 @@ public class MasterServiceImpl implements MasterService {
         }
     }
 
-    private void executeCommand(String addressName) throws Exception {
+    private void executeCommand(String addressName, Boolean isOnCommand ) throws Exception {
         if (connectionStatus == "Connection Failed" || connectionStatus == "Disconnected")   {
             throw new Exception("Connection Failed");
         }
@@ -94,7 +94,7 @@ public class MasterServiceImpl implements MasterService {
         }
 
         int modbusAddress = addressOpt.get().getModbusAddress();
-        sendMomentaryPulse(modbusAddress);
+        sendMomentaryPulse(modbusAddress, isOnCommand);
     }
 
     private Boolean getStatus(String addressName) throws Exception {
@@ -115,12 +115,12 @@ public class MasterServiceImpl implements MasterService {
 
     @Override
     public void turnOnBlower1() throws Exception {
-        executeCommand("Blower_1_On");
+        executeCommand("Blower_1_On", true);
     }
 
     @Override
     public void turnOffBlower1() throws Exception {
-        executeCommand("Blower_1_Off");
+        executeCommand("Blower_1_Off", false);
     }
 
     @Override
@@ -128,11 +128,11 @@ public class MasterServiceImpl implements MasterService {
         return getStatus("Blower_1_Status");
     }
 
-    private void sendMomentaryPulse(int coil) throws IOException {
+    private void sendMomentaryPulse(int coil , Boolean isOnCommand) throws IOException {
         try {
-            writeCoil(coil, true);
+            writeCoil(coil, true, isOnCommand);
             Thread.sleep(PULSE_DURATION_MS);
-            writeCoil(coil, false);
+            writeCoil(coil, false, isOnCommand);
             logger.info("Successfully sent momentary pulse to coil {}", coil);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -141,7 +141,7 @@ public class MasterServiceImpl implements MasterService {
         }
     }
 
-    private void writeCoil(int coil, boolean state) throws IOException {
+    private void writeCoil(int coil, boolean state, Boolean isOnCommand) throws IOException {
         try {
             if (!connection.isConnected()) {
                 connection.connect();
@@ -153,6 +153,19 @@ public class MasterServiceImpl implements MasterService {
                 throw new IOException("Unexpected response type");
             }
             logger.info("Successfully wrote to coil {}: {}", coil, state);
+            if (isOnCommand && state) {
+                logger.info("Blower is turning ON, saving device status...");
+                DeviceStatus deviceStatus = new DeviceStatus();
+                Master master = masterRepository.findByPlcId(slaveId);
+                deviceStatus.setMaster(master);
+
+                Device device = deviceService.getDeviceByName("Blower_1");
+                deviceStatus.setDevice(device);
+                deviceStatus.setStatus(state);
+
+                deviceStatusService.saveDeviceStatus(deviceStatus);
+                logger.info("Device status saved for turning on blower.");
+            }
         } catch (Exception e) {
             logger.error("Error writing to coil {}", coil, e);
             throw new IOException("Failed to write to coil", e);
@@ -171,16 +184,6 @@ public class MasterServiceImpl implements MasterService {
                 ReadCoilsResponse readResponse = (ReadCoilsResponse) response;
                 boolean state = readResponse.getCoilStatus(0);
                 logger.info("Successfully read from coil {}: {}", coil, state);
-
-                DeviceStatus deviceStatus = new DeviceStatus();
-                Master master = masterRepository.findByPlcId(slaveId);
-                deviceStatus.setMaster(master);
-
-                Device device = deviceService.getDeviceByName("Blower_1");
-                deviceStatus.setDevice(device);
-                deviceStatus.setStatus(state);
-
-                deviceStatusService.saveDeviceStatus(deviceStatus);
                 return state;
             }
 

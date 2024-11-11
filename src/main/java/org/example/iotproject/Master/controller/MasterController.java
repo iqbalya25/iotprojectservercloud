@@ -51,7 +51,7 @@ public class MasterController {
         StatusRequestDTO statusRequestDTO = new StatusRequestDTO();
 
         if (Status == true) {
-            statusRequestDTO.setBlower1Status("Blower_1 On");
+            statusRequestDTO.setBlower1Status("Blower 1 On");
         } else {
             statusRequestDTO.setBlower1Status("Blower 1 Off");
         }
