@@ -1,4 +1,4 @@
-package org.example.iotproject.config;
+package org.example.iotproject.Mqtt.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;

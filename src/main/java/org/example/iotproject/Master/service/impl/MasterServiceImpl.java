@@ -3,17 +3,15 @@ package org.example.iotproject.Master.service.impl;
 import com.ghgande.j2mod.modbus.io.ModbusTCPTransaction;
 import com.ghgande.j2mod.modbus.msg.*;
 import com.ghgande.j2mod.modbus.net.TCPMasterConnection;
-import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.example.iotproject.Address.entity.Address;
 import org.example.iotproject.Address.repository.AddressRepository;
 import org.example.iotproject.Device.entity.Device;
 import org.example.iotproject.Device.service.DeviceService;
 import org.example.iotproject.DeviceStatus.entity.DeviceStatus;
-import org.example.iotproject.DeviceStatus.service.DeviceStatusService;
 import org.example.iotproject.Master.entity.Master;
 import org.example.iotproject.Master.repository.MasterRepository;
 import org.example.iotproject.Master.service.MasterService;
-import org.example.iotproject.config.MqttService;
+import org.example.iotproject.Mqtt.service.MqttService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -34,7 +32,6 @@ public class MasterServiceImpl implements MasterService {
 
     private final AddressRepository addressRepository;
     private final MasterRepository masterRepository;
-    private final DeviceStatusService deviceStatusService;
     private final DeviceService deviceService;
     private final MqttService mqttService;
 
@@ -42,10 +39,9 @@ public class MasterServiceImpl implements MasterService {
     private int slaveId;
 
 
-    public MasterServiceImpl(AddressRepository addressRepository, MasterRepository masterRepository, DeviceStatusService deviceStatusService, DeviceService deviceService, MqttService mqttService) {
+    public MasterServiceImpl(AddressRepository addressRepository, MasterRepository masterRepository, DeviceService deviceService, MqttService mqttService) {
         this.addressRepository = addressRepository;
         this.masterRepository = masterRepository;
-        this.deviceStatusService = deviceStatusService;
         this.deviceService = deviceService;
         this.mqttService = mqttService;
     }
@@ -177,7 +173,7 @@ public class MasterServiceImpl implements MasterService {
                 deviceStatus.setDevice(device);
                 deviceStatus.setStatus(state);
 
-                deviceStatusService.saveDeviceStatus(deviceStatus);
+//                deviceStatusService.saveDeviceStatus(deviceStatus);
                 logger.info("Device status saved for turning on blower.");
             }
         } catch (Exception e) {

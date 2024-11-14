@@ -1,4 +1,4 @@
-package org.example.iotproject.config;
+package org.example.iotproject.Mqtt.config;
 
 
 import jakarta.annotation.PostConstruct;
