@@ -21,4 +21,7 @@ public class WebSocketService {
     public void sendConnectionStatus(String status) {
         messagingTemplate.convertAndSend("/topic/connection/status", status);
     }
+    public void sendTemperatureUpdate(String temperature) {
+        messagingTemplate.convertAndSend("/topic/temperature", temperature);
+    }
 }
