@@ -3,22 +3,27 @@ package org.example.iotproject.Master.service.impl;
 import com.ghgande.j2mod.modbus.io.ModbusTCPTransaction;
 import com.ghgande.j2mod.modbus.msg.*;
 import com.ghgande.j2mod.modbus.net.TCPMasterConnection;
+import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.example.iotproject.Address.entity.Address;
 import org.example.iotproject.Address.repository.AddressRepository;
 import org.example.iotproject.Device.entity.Device;
 import org.example.iotproject.Device.service.DeviceService;
 import org.example.iotproject.DeviceStatus.entity.DeviceStatus;
 import org.example.iotproject.DeviceStatus.service.DeviceStatusService;
-import org.example.iotproject.DeviceStatus.service.impl.DeviceStatusServiceImpl;
 import org.example.iotproject.Master.entity.Master;
 import org.example.iotproject.Master.repository.MasterRepository;
 import org.example.iotproject.Master.service.MasterService;
+import org.example.iotproject.config.MqttService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -31,16 +36,18 @@ public class MasterServiceImpl implements MasterService {
     private final MasterRepository masterRepository;
     private final DeviceStatusService deviceStatusService;
     private final DeviceService deviceService;
+    private final MqttService mqttService;
 
     private TCPMasterConnection connection;
     private int slaveId;
 
 
-    public MasterServiceImpl(AddressRepository addressRepository, MasterRepository masterRepository, DeviceStatusService deviceStatusService, DeviceService deviceService) {
+    public MasterServiceImpl(AddressRepository addressRepository, MasterRepository masterRepository, DeviceStatusService deviceStatusService, DeviceService deviceService, MqttService mqttService) {
         this.addressRepository = addressRepository;
         this.masterRepository = masterRepository;
         this.deviceStatusService = deviceStatusService;
         this.deviceService = deviceService;
+        this.mqttService = mqttService;
     }
 
     @Override
@@ -116,16 +123,23 @@ public class MasterServiceImpl implements MasterService {
     @Override
     public void turnOnBlower1() throws Exception {
         executeCommand("Blower_1_On", true);
+        boolean status = getStatus("Blower_1_Status");
+        publishBlowerStatus(status);
     }
+
+
 
     @Override
     public void turnOffBlower1() throws Exception {
         executeCommand("Blower_1_Off", false);
+        boolean status = getStatus("Blower_1_Status");
+        publishBlowerStatus(status);
     }
 
     @Override
     public boolean getBlower1Status()  throws Exception{
-        return getStatus("Blower_1_Status");
+        boolean status = getStatus("Blower_1_Status");
+        return status;
     }
 
     private void sendMomentaryPulse(int coil , Boolean isOnCommand) throws IOException {
@@ -193,6 +207,74 @@ public class MasterServiceImpl implements MasterService {
             throw new IOException("Failed to read from coil", e);
         }
     }
+
+    @Scheduled(fixedRate = 5000)
+    public void checkConnectionStatus() {
+        if (connection != null) {
+            try {
+                Optional<Address> connectionCheckAddress = addressRepository.findByAddressName("Connection_Check");
+                if (connectionCheckAddress.isEmpty()) {
+                    logger.error("Connection_Check address not found in database");
+                    connectionStatus = "Configuration Error";
+                    return;
+                }
+
+                int modbusAddress = connectionCheckAddress.get().getModbusAddress();
+
+                if (connection.isConnected()) {
+                    // Just try to read the address - if it succeeds, connection is good
+                    ReadCoilsRequest req = new ReadCoilsRequest(modbusAddress, 1);
+                    req.setUnitID(slaveId);
+                    ModbusResponse response = executeTransaction(req);
+
+                    // If we get here, read was successful
+                    connectionStatus = "Connected";
+                    logger.info("Successfully read from PLC address {}", modbusAddress);
+                } else {
+                    connectionStatus = "Disconnected";
+                    logger.warn("Modbus connection lost");
+                }
+            } catch (Exception e) {
+                connectionStatus = "Connection Failed";
+                logger.error("Failed to read from PLC: {}", e.getMessage());
+            }
+        } else {
+            connectionStatus = "Not Initialized";
+        }
+        publishConnectionStatus();
+    }
+
+    private void publishConnectionStatus() {
+        try {
+            logger.info("Preparing to publish connection status to MQTT");
+            Map<String, Object> status = new HashMap<>();
+            status.put("status", connectionStatus);
+            status.put("timestamp", Instant.now());
+            status.put("masterId", this.slaveId);
+
+            logger.info("Publishing connection status: {}", status);
+            mqttService.publish("plc/connection/status", status);
+        } catch (Exception e) {
+            logger.error("Failed to publish connection status", e);
+        }
+    }
+
+    private void publishBlowerStatus(boolean blowerStatus) {
+        try {
+            logger.info("Preparing to publish blower status to MQTT");
+            Map<String, Object> status = new HashMap<>();
+            status.put("status", blowerStatus ? "ON" : "OFF");
+            status.put("timestamp", Instant.now());
+            status.put("deviceId", "Blower_1");
+            status.put("masterId", this.slaveId);
+
+            logger.info("Publishing blower status: {}", status);
+            mqttService.publish("plc/blower/status", status);
+        } catch (Exception e) {
+            logger.error("Failed to publish blower status", e);
+        }
+    }
+
 
     private ModbusResponse executeTransaction(ModbusRequest request) throws Exception {
         ModbusTCPTransaction transaction = new ModbusTCPTransaction(connection);
