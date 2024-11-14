@@ -28,7 +28,7 @@ public class MqttHandlerService {
     @PostConstruct
     public void subscribeMqttTopics() {
         // Subscribe to device status
-        mqttService.subscribe("plc/device/status", (topic, msg) -> {
+        mqttService.subscribe("plc/blower/status", (topic, msg) -> {
             try {
                 String message = new String(msg.getPayload());
                 webSocketService.sendDeviceStatus(message);
