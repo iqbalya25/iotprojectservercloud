@@ -62,5 +62,19 @@ public class MasterController {
             return false;
         }
     }
+
+    @GetMapping("/health")
+    public ResponseEntity<String> healthCheck() {
+        try {
+            // Test database connection
+            masterRepository.count();
+            return ResponseEntity.ok("Service is healthy");
+        } catch (Exception e) {
+            log.error("Health check failed: ", e);
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Service is unhealthy: " + e.getMessage());
+        }
+    }
 }
 
