@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.example.iotproject.Mqtt.service.MqttService;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Controller;
 
 import java.util.Map;
@@ -13,17 +14,20 @@ import java.util.Map;
 @Slf4j
 public class WebSocketController {
     private final MqttService mqttService;
+    private final ObjectMapper objectMapper;
 
-    public WebSocketController(MqttService mqttService) {
+    public WebSocketController(MqttService mqttService, ObjectMapper objectMapper) {
         this.mqttService = mqttService;
+        this.objectMapper = objectMapper;
     }
 
     @MessageMapping("/device/command")
-    public void handleCommand(String commandJson) {
-        log.info("Received WebSocket command: {}", commandJson);
+    public void handleCommand(@Payload String payload) {
+        log.info("Received WebSocket command payload: {}", payload);
 
         try {
-            JsonNode command = new ObjectMapper().readTree(commandJson);
+            // Parse the command
+            JsonNode command = objectMapper.readTree(payload);
             String action = command.get("action").asText();
             log.info("Processing action: {}", action);
 
@@ -52,7 +56,7 @@ public class WebSocketController {
                     log.warn("Unknown command: {}", action);
             }
         } catch (Exception e) {
-            log.error("Error handling command: {}", commandJson, e);
+            log.error("Error processing command payload: {}", payload, e);
         }
     }
 }
