@@ -19,7 +19,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("http://localhost:3000")
+                .setAllowedOrigins(
+                        "https://iotproject-fe.vercel.app",
+                        "http://localhost:3000"  // for local development
+                )
                 .withSockJS();
     }
 }
