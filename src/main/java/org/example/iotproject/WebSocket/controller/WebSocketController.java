@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.example.iotproject.Mqtt.service.MqttService;
+import org.example.iotproject.WebSocket.dto.CommandDto;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Controller;
@@ -22,18 +23,16 @@ public class WebSocketController {
     }
 
     @MessageMapping("/device/command")
-    public void handleCommand(@Payload String payload) {
-        log.info("Received WebSocket command payload: {}", payload);
+    public void handleCommand(@Payload CommandDto command) {  // Changed from String to CommandDto
+        log.info("Received WebSocket command: {}", command);
 
         try {
-            // Parse the command
-            JsonNode command = objectMapper.readTree(payload);
-            String action = command.get("action").asText();
+            String action = command.getAction();
             log.info("Processing action: {}", action);
 
             switch (action) {
                 case "CONNECT_MASTER":
-                    String ipAddress = command.get("ipAddress").asText();
+                    String ipAddress = command.getIpAddress();
                     log.info("Publishing connect command to MQTT. IP: {}", ipAddress);
                     mqttService.publish("plc/commands/connect",
                             Map.of("action", "CONNECT_MASTER", "ipAddress", ipAddress));
@@ -56,7 +55,7 @@ public class WebSocketController {
                     log.warn("Unknown command: {}", action);
             }
         } catch (Exception e) {
-            log.error("Error processing command payload: {}", payload, e);
+            log.error("Error processing command: {}", e.getMessage(), e);
         }
     }
 }

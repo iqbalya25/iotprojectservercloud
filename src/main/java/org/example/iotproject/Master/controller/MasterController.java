@@ -1,6 +1,7 @@
 package org.example.iotproject.Master.controller;
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.iotproject.Master.dto.MasterDTO;
 import org.example.iotproject.Master.entity.Master;
 import org.example.iotproject.Master.repository.MasterRepository;
 import org.springframework.http.HttpStatus;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/masters")
@@ -36,11 +38,15 @@ public class MasterController {
                         .body(Map.of("error", "Database connection failed"));
             }
 
-            // Fetch masters
+            // Fetch masters and convert to DTOs
             List<Master> masters = masterRepository.findAll();
-            log.info("Successfully fetched {} masters", masters.size());
+            List<MasterDTO> masterDTOs = masters.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
 
-            return ResponseEntity.ok(masters);
+            log.info("Successfully fetched {} masters", masterDTOs.size());
+
+            return ResponseEntity.ok(masterDTOs);
         } catch (Exception e) {
             log.error("Error fetching masters: ", e);
             return ResponseEntity
@@ -53,9 +59,19 @@ public class MasterController {
         }
     }
 
+    private MasterDTO convertToDTO(Master master) {
+        MasterDTO dto = new MasterDTO();
+        dto.setId(master.getId());
+        dto.setMasterName(master.getMasterName());
+        dto.setMasterIpAddress(master.getMasterIpAddress());
+        dto.setMasterPort(master.getMasterPort());
+        dto.setPlcId(master.getPlcId());
+        dto.setMasterLocation(master.getMasterLocation());
+        return dto;
+    }
+
     private boolean testDatabaseConnection() {
         try {
-            // Try a simple database operation
             masterRepository.count();
             return true;
         } catch (Exception e) {
@@ -63,63 +79,6 @@ public class MasterController {
             return false;
         }
     }
-
-    @GetMapping("/health")
-    public ResponseEntity<Map<String, String>> healthCheck() {
-        Map<String, String> response = new HashMap<>();
-
-        try {
-            // Log environment variables (don't log actual password)
-            log.info("Database URL: {}", System.getenv("SPRING_DATASOURCE_URL"));
-            log.info("Database Username: {}", System.getenv("SPRING_DATASOURCE_USERNAME"));
-            log.info("Database URL exists: {}", System.getenv("SPRING_DATASOURCE_URL") != null);
-            log.info("Username exists: {}", System.getenv("SPRING_DATASOURCE_USERNAME") != null);
-            log.info("Password exists: {}", System.getenv("SPRING_DATASOURCE_PASSWORD") != null);
-
-            // Test database connection
-            masterRepository.count();
-            response.put("status", "healthy");
-            response.put("message", "Database connection successful");
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("Health check failed: ", e);
-            response.put("status", "unhealthy");
-            response.put("error", e.getMessage());
-            response.put("errorType", e.getClass().getName());
-            // Get root cause
-            Throwable rootCause = e;
-            while (rootCause.getCause() != null) {
-                rootCause = rootCause.getCause();
-            }
-            response.put("rootCause", rootCause.getMessage());
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(response);
-        }
-    }
-
-    @GetMapping("/config")
-    public ResponseEntity<Map<String, String>> checkConfig() {
-        Map<String, String> config = new HashMap<>();
-
-        // Get database URL (mask sensitive parts)
-        String dbUrl = System.getenv("SPRING_DATASOURCE_URL");
-        if (dbUrl != null) {
-            // Mask password if present in URL
-            dbUrl = dbUrl.replaceAll("password=.*?[&;]", "password=*****&");
-            config.put("database_url_set", "true");
-            config.put("database_url_pattern", dbUrl.matches("jdbc:postgresql://.*") ? "valid" : "invalid");
-        } else {
-            config.put("database_url_set", "false");
-        }
-
-        // Check username
-        config.put("username_set", System.getenv("SPRING_DATASOURCE_USERNAME") != null ? "true" : "false");
-
-        // Check password (don't show actual password)
-        config.put("password_set", System.getenv("SPRING_DATASOURCE_PASSWORD") != null ? "true" : "false");
-
-        return ResponseEntity.ok(config);
-    }
 }
+
 
