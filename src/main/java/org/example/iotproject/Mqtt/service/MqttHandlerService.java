@@ -103,28 +103,38 @@ public class MqttHandlerService {
         }
     }
 
-    @MessageMapping("/device/command")
-    public void handleCommand(String commandJson) {
-        try {
-            JsonNode command = new ObjectMapper().readTree(commandJson);
-            String action = command.get("action").asText();
-
-            switch (action) {
-                case "CONNECT_MASTER":
-                    String ipAddress = command.get("ipAddress").asText();
-                    mqttService.publish("plc/commands/connect",
-                            Map.of("action", "CONNECT", "ipAddress", ipAddress));
-                    break;
-                case "TURN_ON_BLOWER":
-                case "TURN_OFF_BLOWER":
-                    mqttService.publish("plc/commands/blower",
-                            Map.of("action", action));
-                    break;
-                default:
-                    log.warn("Unknown command: {}", action);
-            }
-        } catch (Exception e) {
-            log.error("Error handling command", e);
-        }
-    }
+//    @MessageMapping("/device/command")
+//    public void handleCommand(String commandJson) {
+//        log.info("Received WebSocket command: {}", commandJson);
+//
+//        try {
+//            JsonNode command = new ObjectMapper().readTree(commandJson);
+//            String action = command.get("action").asText();
+//            log.info("Processing action: {}", action);
+//
+//            switch (action) {
+//                case "CONNECT_MASTER":
+//                    String ipAddress = command.get("ipAddress").asText();
+//                    log.info("Publishing connect command to MQTT. IP: {}", ipAddress);
+//                    mqttService.publish("plc/commands/connect",
+//                            Map.of("action", "CONNECT_MASTER", "ipAddress", ipAddress));
+//                    break;
+//                case "DISCONNECT_MASTER":
+//                    log.info("Publishing disconnect command to MQTT");
+//                    mqttService.publish("plc/commands/connect",
+//                            Map.of("action", "DISCONNECT_MASTER"));
+//                    break;
+//                case "TURN_ON_BLOWER":
+//                case "TURN_OFF_BLOWER":
+//                    log.info("Publishing blower command to MQTT: {}", action);
+//                    mqttService.publish("plc/commands/blower",
+//                            Map.of("action", action));
+//                    break;
+//                default:
+//                    log.warn("Unknown command: {}", action);
+//            }
+//        } catch (Exception e) {
+//            log.error("Error handling command: {}", commandJson, e);
+//        }
+//    }
 }

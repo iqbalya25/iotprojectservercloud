@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-public class DeviceValueServiceImpl extends DeviceValueService {
+public class DeviceValueServiceImpl implements DeviceValueService {
     private final DeviceValueRepository deviceValueRepository;
 
     public DeviceValueServiceImpl(DeviceValueRepository deviceValueRepository) {
