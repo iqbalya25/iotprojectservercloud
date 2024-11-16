@@ -23,7 +23,7 @@ public class WebSocketController {
     }
 
     @MessageMapping("/device/command")
-    public void handleCommand(@Payload CommandDto command) {  // Changed from String to CommandDto
+    public void handleCommand(@Payload CommandDto command) {  // Changed from String to CommandDto///
         log.info("Received WebSocket command: {}", command);
 
         try {
