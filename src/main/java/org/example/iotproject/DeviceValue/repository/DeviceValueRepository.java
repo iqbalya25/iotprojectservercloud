@@ -16,4 +16,6 @@ public interface DeviceValueRepository extends JpaRepository<DeviceValue, Long> 
     List<DeviceValue> findByDevice(Device device);
     List<DeviceValue> findByDeviceAndCreatedAtBetween(Device device, Instant startTime, Instant endTime);
     List<DeviceValue> findTop10ByDeviceOrderByCreatedAtDesc(Device device);
+    List<DeviceValue> findByDeviceAndCreatedAtBetweenOrderByCreatedAtAsc(
+            Device device, Instant startTime, Instant endTime);
 }
