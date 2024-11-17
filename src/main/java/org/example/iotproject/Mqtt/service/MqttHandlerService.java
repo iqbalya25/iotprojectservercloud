@@ -90,6 +90,18 @@ public class MqttHandlerService {
                 log.error("Error handling temperature message", e);
             }
         });
+
+        mqttService.subscribe("plc/blower/parameters", (topic, msg) -> {
+            try {
+                String message = new String(msg.getPayload());
+                // Forward directly to WebSocket
+                webSocketService.sendBlowerParameters(message);
+                log.info("Blower parameters forwarded to WebSocket");
+            } catch (Exception e) {
+                log.error("Error handling blower parameters message", e);
+            }
+        });
+
     }
 
     // Receive command from WebSocket and forward to MQTT
@@ -102,6 +114,8 @@ public class MqttHandlerService {
             log.error("Error forwarding command to MQTT", e);
         }
     }
+
+
 
 //    @MessageMapping("/device/command")
 //    public void handleCommand(String commandJson) {

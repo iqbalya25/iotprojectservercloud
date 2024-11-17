@@ -25,4 +25,9 @@ public class WebSocketService {
     public void sendTemperatureUpdate(String temperature) {
         messagingTemplate.convertAndSend("/topic/temperature", temperature);
     }
+
+    public void sendBlowerParameters(String parameters) {
+        messagingTemplate.convertAndSend("/topic/blower/parameters", parameters);
+        log.info("Sent blower parameters to WebSocket clients");
+    }
 }

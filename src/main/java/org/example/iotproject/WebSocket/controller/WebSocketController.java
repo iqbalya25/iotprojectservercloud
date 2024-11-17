@@ -56,4 +56,18 @@ public class WebSocketController {
             log.error("Error processing command: {}", e.getMessage(), e);
         }
     }
+
+    @MessageMapping("/blower/frequency")
+    public void handleBlowerFrequencyCommand(String commandJson) {
+        try {
+            JsonNode command = new ObjectMapper().readTree(commandJson);
+            int frequency = command.get("frequency").asInt();
+
+            mqttService.publish("plc/commands/blower/frequency",
+                    Map.of("frequency", frequency));
+            log.info("Published blower frequency command: {}", frequency);
+        } catch (Exception e) {
+            log.error("Error handling blower frequency command", e);
+        }
+    }
 }
