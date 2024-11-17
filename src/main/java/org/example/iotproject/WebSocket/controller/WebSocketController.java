@@ -9,6 +9,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Controller;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Controller
@@ -23,37 +24,34 @@ public class WebSocketController {
     }
 
     @MessageMapping("/device/command")
-    public void handleCommand(@Payload CommandDto command) {  // Changed from String to CommandDto///
+    public void handleCommand(@Payload CommandDto command) {
         log.info("Received WebSocket command: {}", command);
-
         try {
             String action = command.getAction();
             log.info("Processing action: {}", action);
 
-            switch (action) {
-                case "CONNECT_MASTER":
-                    String ipAddress = command.getIpAddress();
-                    log.info("Publishing connect command to MQTT. IP: {}", ipAddress);
-                    mqttService.publish("plc/commands/connect",
-                            Map.of("action", "CONNECT_MASTER", "ipAddress", ipAddress));
-                    break;
+            Map<String, Object> mqttPayload = new HashMap<>();
+            mqttPayload.put("action", action);
 
-                case "DISCONNECT_MASTER":
-                    log.info("Publishing disconnect command to MQTT");
-                    mqttService.publish("plc/commands/connect",
-                            Map.of("action", "DISCONNECT_MASTER"));
-                    break;
-
-                case "TURN_ON_BLOWER":
-                case "TURN_OFF_BLOWER":
-                    log.info("Publishing blower command to MQTT: {}", action);
-                    mqttService.publish("plc/commands/blower",
-                            Map.of("action", action));
-                    break;
-
-                default:
-                    log.warn("Unknown command: {}", action);
+            // Handle Connection Commands
+            if ("CONNECT_MASTER".equals(action) || "DISCONNECT_MASTER".equals(action)) {
+                if ("CONNECT_MASTER".equals(action)) {
+                    mqttPayload.put("ipAddress", command.getIpAddress());
+                }
+                log.info("Publishing connection command: {}", mqttPayload);
+                mqttService.publish("plc/commands/connect", mqttPayload);
             }
+
+            // Handle Blower Commands
+            else if ("TURN_ON_BLOWER".equals(action) || "TURN_OFF_BLOWER".equals(action)) {
+                log.info("Publishing blower command: {}", mqttPayload);
+                mqttService.publish("plc/commands/blower", mqttPayload);
+            }
+
+            else {
+                log.warn("Unknown command action: {}", action);
+            }
+
         } catch (Exception e) {
             log.error("Error processing command: {}", e.getMessage(), e);
         }
