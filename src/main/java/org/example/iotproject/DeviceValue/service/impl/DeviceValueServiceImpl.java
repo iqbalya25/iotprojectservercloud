@@ -8,6 +8,7 @@ import org.example.iotproject.DeviceValue.repository.DeviceValueRepository;
 import org.example.iotproject.DeviceValue.service.DeviceValueService;
 import org.springframework.stereotype.Service;
 
+import java.awt.print.Pageable;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
