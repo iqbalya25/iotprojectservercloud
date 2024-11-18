@@ -114,4 +114,9 @@ public class DeviceValueServiceImpl implements DeviceValueService {
             throw new RuntimeException("Failed to fetch device history", e);
         }
     }
+
+    @Override
+    public List<DeviceValue> getTemperatureLogsPaginated(Instant startTime, Instant endTime, Pageable pageable) {
+        return List.of();
+    }
 }
