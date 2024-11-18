@@ -82,13 +82,16 @@ public class DeviceValueController {
             @RequestParam(defaultValue = "desc") String sortDirection) {
 
         try {
-            log.info("Attempting to fetch temperature logs");
+            // Get date range
             LocalDate selectedDate = date != null ? date : LocalDate.now();
             Instant startTime = selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
             Instant endTime = selectedDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
 
+            // Use your existing service method
             List<DeviceValue> allLogs = deviceValueService.getTemperatureHistory(startTime, endTime);
-            log.info("Filtered records for time range: {}", allLogs.size());
+
+            // Sort by timestamp descending (latest first)
+            allLogs.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
 
             // Manual pagination
             int totalItems = allLogs.size();
@@ -96,16 +99,12 @@ public class DeviceValueController {
             int start = page * size;
             int end = Math.min(start + size, totalItems);
 
-            // Convert to DTOs
-            List<TemperatureLogDTO> paginatedLogs = allLogs.subList(start, end)
-                    .stream()
-                    .map(TemperatureLogDTO::fromEntity)
-                    .collect(Collectors.toList());
-
-            log.info("Returning {} records for page {}", paginatedLogs.size(), page);
+            List<DeviceValue> paginatedLogs = allLogs.subList(start, end);
 
             Map<String, Object> response = new HashMap<>();
-            response.put("content", paginatedLogs);
+            response.put("content", paginatedLogs.stream()
+                    .map(TemperatureLogDTO::fromEntity)
+                    .collect(Collectors.toList()));
             response.put("currentPage", page);
             response.put("totalItems", totalItems);
             response.put("totalPages", totalPages);
