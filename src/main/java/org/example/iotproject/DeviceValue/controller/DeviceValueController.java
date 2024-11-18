@@ -3,6 +3,7 @@ package org.example.iotproject.DeviceValue.controller;
 import lombok.extern.slf4j.Slf4j;
 import org.example.iotproject.Device.entity.Device;
 import org.example.iotproject.Device.service.DeviceService;
+import org.example.iotproject.DeviceValue.dto.TemperatureLogDTO;
 import org.example.iotproject.DeviceValue.entity.DeviceValue;
 import org.example.iotproject.DeviceValue.repository.DeviceValueRepository;
 import org.example.iotproject.DeviceValue.service.DeviceValueService;
@@ -21,6 +22,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -80,42 +82,13 @@ public class DeviceValueController {
             @RequestParam(defaultValue = "desc") String sortDirection) {
 
         try {
-            // Get date range
+            log.info("Attempting to fetch temperature logs");
             LocalDate selectedDate = date != null ? date : LocalDate.now();
             Instant startTime = selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
             Instant endTime = selectedDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
 
-            log.info("Attempting to fetch temperature logs");
-            log.info("Date range: {} to {}", startTime, endTime);
-
-            // Try to get the device first
-            Device device = deviceService.getDeviceByName("Temp_1");
-            if (device == null) {
-                log.error("Device Temp_1 not found");
-                return ResponseEntity
-                        .badRequest()
-                        .body(Map.of("error", "Temperature sensor device not found"));
-            }
-            log.info("Found device: {}", device.getDeviceName());
-
-            // Get all data for debugging
-            List<DeviceValue> allDeviceValues = deviceValueRepository.findAll();
-            log.info("Total records in device_value table: {}", allDeviceValues.size());
-
-            // Get filtered data
             List<DeviceValue> allLogs = deviceValueService.getTemperatureHistory(startTime, endTime);
             log.info("Filtered records for time range: {}", allLogs.size());
-
-            if (allLogs.isEmpty()) {
-                log.warn("No temperature data found for the specified time range");
-                return ResponseEntity.ok(Map.of(
-                        "content", List.of(),
-                        "currentPage", page,
-                        "totalItems", 0,
-                        "totalPages", 0,
-                        "size", size
-                ));
-            }
 
             // Manual pagination
             int totalItems = allLogs.size();
@@ -123,10 +96,14 @@ public class DeviceValueController {
             int start = page * size;
             int end = Math.min(start + size, totalItems);
 
-            List<DeviceValue> paginatedLogs = allLogs.subList(start, end);
+            // Convert to DTOs
+            List<TemperatureLogDTO> paginatedLogs = allLogs.subList(start, end)
+                    .stream()
+                    .map(TemperatureLogDTO::fromEntity)
+                    .collect(Collectors.toList());
+
             log.info("Returning {} records for page {}", paginatedLogs.size(), page);
 
-            // Create response
             Map<String, Object> response = new HashMap<>();
             response.put("content", paginatedLogs);
             response.put("currentPage", page);
@@ -139,11 +116,7 @@ public class DeviceValueController {
             log.error("Error processing temperature logs request", e);
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                            "error", e.getMessage(),
-                            "details", e.toString(),
-                            "timestamp", Instant.now().toString()
-                    ));
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
